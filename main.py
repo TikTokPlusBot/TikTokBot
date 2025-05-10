@@ -48,10 +48,11 @@ def telegram_webhook():
 # --- Set webhook ---
 @app.route('/')
 def set_webhook():
-    webhook_url = f"[https://{os.environ['REPL_SLUG']}.{os.environ['REPL_OWNER']}.repl.co/{API_TOKEN}]https://{os.environ['REPL_SLUG']}.{os.environ['REPL_OWNER']}.repl.co/{API_TOKEN}"
+    webhook_url = f"https://tiktokbot-00js.onrender.com/{API_TOKEN}"  # Update to Render URL
     bot.set_webhook(url=webhook_url)
     return "Webhook set", 200
 
 # --- Run Flask app ---
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8080)
+
