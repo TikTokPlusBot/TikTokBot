@@ -2,7 +2,7 @@ import os
 import telebot
 from flask import Flask, request
 
-API_TOKEN = os.environ['API_TOKEN']  # Replace with your actual bot token
+API_TOKEN = os.environ['API_TOKEN']  # Ensure that the API token is set in your environment variables
 
 bot = telebot.TeleBot(API_TOKEN)
 app = Flask(__name__)
@@ -48,7 +48,8 @@ def telegram_webhook():
 # --- Set webhook ---
 @app.route('/')
 def set_webhook():
-    webhook_url = f"https://tiktokbot-00js.onrender.com/{API_TOKEN}"  # Update to Render URL
+    # Update the webhook URL to match the Render URL and API token
+    webhook_url = f"https://tiktokbot-00js.onrender.com/{API_TOKEN}"  # Use the Render URL here
     bot.set_webhook(url=webhook_url)
     return "Webhook set", 200
 
