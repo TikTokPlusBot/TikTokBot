@@ -5,6 +5,7 @@ from flask import Flask, request
 # --- Configuration ---
 API_TOKEN = os.environ['API_TOKEN']
 ADMIN_ID = 7984779406  # Your Telegram user ID
+GROUP_CHAT_ID = -1002613048185  # Your group chat ID
 
 bot = telebot.TeleBot(API_TOKEN)
 app = Flask(__name__)
@@ -56,12 +57,22 @@ def generate_main_menu():
     )
     return markup
 
+# --- Send Buttons to Group ---
+@bot.message_handler(content_types=['video'])
+def handle_video(message):
+    # Send buttons for videos posted in the group
+    if message.chat.id == GROUP_CHAT_ID:
+        bot.send_message(
+            message.chat.id,
+            "Choose an action for the video:",
+            reply_to_message_id=message.message_id,
+            reply_markup=generate_main_menu()
+        )
+
 # --- Flask Webhook Endpoint ---
 @app.route(f"/{API_TOKEN}", methods=['POST'])
 def telegram_webhook():
-    bot.process_new_updates([
-        telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
-    ])
+    bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
     return "ok", 200
 
 # --- Set Webhook on Root ---
