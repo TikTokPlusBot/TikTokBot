@@ -2,32 +2,23 @@ import os
 import telebot
 from flask import Flask, request
 
-API_TOKEN = os.environ['API_TOKEN']  # Ensure that the API token is set in your environment variables
+API_TOKEN = os.environ['API_TOKEN']
+ADMIN_ID = int(os.environ.get("ADMIN_ID", 123456789))  # Replace this with your actual Telegram ID or set it in Render ENV
 
 bot = telebot.TeleBot(API_TOKEN)
 app = Flask(__name__)
 
-# --- Interaction Tracker ---
-@bot.message_handler(commands=['start'])
-def handle_start(message):
-    bot.send_message(message.chat.id, "Welcome! Choose an action:",
-                     reply_markup=generate_main_menu())
+# --- Flask Webhook Endpoint ---
+@app.route(f"/{API_TOKEN}", methods=['POST'])
+def telegram_webhook():
+    bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
+    return "ok", 200
 
-@bot.callback_query_handler(func=lambda call: True)
-def handle_callback(call):
-    user = call.from_user
-    action = call.data
-    print(f"User @{user.username} ({user.id}) clicked: {action}")
-
-    if action == "watch_video":
-        bot.answer_callback_query(call.id, "Tracking started. Enjoy!")
-        bot.send_message(call.message.chat.id, "Here's your video:")
-        bot.send_video(call.message.chat.id, "https://www.example.com/your_video.mp4")
-    elif action == "download_video":
-        bot.answer_callback_query(call.id, "Logging download request...")
-        bot.send_message(call.message.chat.id, "Your download will begin shortly.")
-    elif action == "vip_only":
-        bot.answer_callback_query(call.id, "VIP only! Access denied.")
+@app.route('/')
+def set_webhook():
+    webhook_url = f"https://tiktokbot-00js.onrender.com/{API_TOKEN}"
+    bot.set_webhook(url=webhook_url)
+    return "Webhook set", 200
 
 # --- Inline Keyboard ---
 def generate_main_menu():
@@ -39,20 +30,36 @@ def generate_main_menu():
     markup.add(telebot.types.InlineKeyboardButton("🔒 VIP Content", callback_data="vip_only"))
     return markup
 
-# --- Flask Webhook Endpoint ---
-@app.route(f"/{API_TOKEN}", methods=['POST'])
-def telegram_webhook():
-    bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
-    return "ok", 200
+# --- Menu Command for Group ---
+@bot.message_handler(commands=['menu'])
+def handle_menu(message):
+    bot.send_message(message.chat.id, "Choose an action:", reply_markup=generate_main_menu())
 
-# --- Set webhook ---
-@app.route('/')
-def set_webhook():
-    # Update the webhook URL to match the Render URL and API token
-    webhook_url = f"https://tiktokbot-00js.onrender.com/{API_TOKEN}"  # Use the Render URL here
-    bot.set_webhook(url=webhook_url)
-    return "Webhook set", 200
+# --- Button Logic ---
+@bot.callback_query_handler(func=lambda call: True)
+def handle_callback(call):
+    user = call.from_user
+    action = call.data
+    chat_id = call.message.chat.id
 
-# --- Run Flask app ---
+    log_message = f"User @{user.username or 'NoUsername'} ({user.id}) clicked: {action}"
+
+    if action == "watch_video":
+        bot.answer_callback_query(call.id, "Tracking started. Enjoy!")
+        bot.send_message(chat_id, "Here's your video:")
+        # Placeholder — real video should be in original post
+        # bot.send_video(chat_id, "https://www.example.com/your_video.mp4")
+    elif action == "download_video":
+        bot.answer_callback_query(call.id, "Logging download request...")
+        bot.send_message(chat_id, "Your download will begin shortly.")
+    elif action == "vip_only":
+        bot.answer_callback_query(call.id, "VIP only! Access denied.")
+
+    try:
+        bot.send_message(ADMIN_ID, log_message)
+    except:
+        print(f"Failed to send log to admin: {log_message}")
+
+# --- Run Flask ---
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8080)  # Ensure it's binding to all interfaces
+    app.run(host='0.0.0.0', port=8080)
